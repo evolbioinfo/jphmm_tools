@@ -6,7 +6,7 @@ import pandas as pd
 
 from jphmm_tools import parse_breakpoints, breakpoints2bitmasks, shift_bitmask, expand_crfs, \
     parse_aligned_coordinates, \
-    parse_bitmask, get_reference_coordinates, HXB2_LOS_ALAMOS_ID, VERSION
+    parse_bitmask, get_reference_coordinates, HXB2_LOS_ALAMOS_ID, VERSION, get_gap_mask
 
 DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 HIV1_BREAKPOINTS = os.path.join(DATA_DIR, 'HIV1.breakpoints')
@@ -59,6 +59,8 @@ def get_subtypes(jphmm_msas, jphmm_recs, gappy_breakpoint_bitmask_file=None,
         crf2st2bitmask = parse_bitmask(gappy_breakpoint_bitmask_file)
         n_gappy = get_length(crf2st2bitmask)
 
+    crf2gapmask = get_gap_mask(crf2st2bitmask)
+
     id2insertion_length, id2n, id2st2bitmask = jphmm2bitmask(crf2st2bitmask, jphmm_msas, jphmm_recs, n_gappy,
                                                              generalise_subtypes=generalise_subtypes)
 
@@ -78,13 +80,15 @@ def get_subtypes(jphmm_msas, jphmm_recs, gappy_breakpoint_bitmask_file=None,
             potential_subtypes.extend(subtypes)
 
         for crf, crf_st2bitmask in crf2st2bitmask.items():
-            if subtypes - set(crf_st2bitmask.keys()):
-                continue
+            gapmask = crf2gapmask[crf]
             incompatible = False
             for st, bitmask in st2bitmask.items():
-                if np.any(bitmask & ~crf_st2bitmask[st]):
+                incompatibility_mask = bitmask & gapmask
+                if st in crf_st2bitmask:
+                    incompatibility_mask = bitmask & ~crf_st2bitmask[st]
+                if np.any(incompatibility_mask):
                     if slack:
-                        incompatible_len = sum((bitmask & ~crf_st2bitmask[st]).astype(int))
+                        incompatible_len = sum(incompatibility_mask.astype(int))
                         if incompatible_len <= slack:
                             continue
                     incompatible = True
@@ -118,10 +122,14 @@ def get_gappy_breakpoints(breakpoint_file, aln_file, reference_id=HXB2_LOS_ALAMO
     :rtype: dict
     """
     crf2st2bitmask = breakpoints2bitmasks(parse_breakpoints(breakpoint_file), generalise_subtypes=generalise_subtypes)
-    expand_crfs(crf2st2bitmask, crf2st2bitmask)
 
     position_shift, n, n_gappy = get_reference_coordinates(aln_file, reference_id=reference_id)
-    shift_bitmask(crf2st2bitmask, defaultdict(lambda: position_shift), n_gappy)
+    shift_bitmask(crf2st2bitmask,
+                  {crf: position_shift[: min(n, len(next(iter(crf2st2bitmask[crf].values()))))]
+                   for crf in crf2st2bitmask.keys()},
+                  n_gappy)
+
+    expand_crfs(crf2st2bitmask, crf2st2bitmask)
 
     return crf2st2bitmask, n_gappy
 
@@ -153,7 +161,7 @@ def jphmm2bitmask(crf2st2bitmask, jphmm_msas, jphmm_recs, n_gappy, generalise_su
             for name, st2intervals in id2st2interval.items()}
     id2st2bitmask = breakpoints2bitmasks(id2st2interval, generalise_subtypes=generalise_subtypes)
     id2pos = parse_aligned_coordinates(jphmm_msas)
-    id2insertion_length = shift_bitmask(id2st2bitmask, id2pos, n_gappy, gap_fill=0)
+    id2insertion_length = shift_bitmask(id2st2bitmask, id2pos, n_gappy)
     expand_crfs(id2st2bitmask, crf2st2bitmask)
     return id2insertion_length, id2n, id2st2bitmask
 

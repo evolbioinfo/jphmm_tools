@@ -992,7 +992,7 @@
 
 >CRF_98 # Breakpoints from http://www.ncbi.nlm.nih.gov/pubmed/29947242 (Recordon-Pinson et al. 2018).
 1	682	U
-683 2081	CRF_06
+683	2081	CRF_06
 2082	2181	B
 2182	3041	CRF_06
 3042	4421	B

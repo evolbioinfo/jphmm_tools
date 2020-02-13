@@ -2,13 +2,14 @@ import os
 import unittest
 
 from jphmm_tools.subtyper import jphmm2bitmask, parse_bitmask, get_length, get_gappy_breakpoints
-from jphmm_tools import save_bitmask
+from jphmm_tools import save_bitmask, get_gap_mask
 from hashlib import md5
 
 
 DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 BREAKPOINTS = os.path.join(DATA_DIR, 'HIV1.breakpoints')
 GAPPY_BREAKPOINTS = os.path.join(DATA_DIR, 'HIV1.gappy_breakpoints')
+GAPMASK = os.path.join(DATA_DIR, 'HIV1.gapmask')
 JPHMM_BITMASK = os.path.join(DATA_DIR, 'HIV1.bitmask')
 ALN = os.path.join(DATA_DIR, 'HIV1.aln.fasta')
 MSA = os.path.join(DATA_DIR, 'aln_to_msa.txt')
@@ -27,6 +28,20 @@ class BitmaskTest(unittest.TestCase):
             our_hash = md5(f.read().encode()).hexdigest()
         try:
             os.remove(out_bp)
+        except:
+            pass
+        self.assertEqual(expected_hash, our_hash, msg='Hashsum of the file does not correspond to the expected one.')
+
+    def test_gapmask(self):
+        out_gm = '{}.temp'.format(GAPMASK)
+
+        save_bitmask({name: {'-': gm} for name, gm in get_gap_mask(parse_bitmask(GAPPY_BREAKPOINTS)).items()}, out_gm)
+        with open(GAPMASK, 'r') as f:
+            expected_hash = md5(f.read().encode()).hexdigest()
+        with open(out_gm, 'r') as f:
+            our_hash = md5(f.read().encode()).hexdigest()
+        try:
+            os.remove(out_gm)
         except:
             pass
         self.assertEqual(expected_hash, our_hash, msg='Hashsum of the file does not correspond to the expected one.')

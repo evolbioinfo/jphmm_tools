@@ -4,7 +4,7 @@ from Bio import SeqIO
 from Bio.Alphabet import generic_dna
 import numpy as np
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 
 HXB2_LOS_ALAMOS_ID = 'B.FR.83.HXB2_LAI_IIIB_BRU.K03455'
 
@@ -30,8 +30,6 @@ def parse_breakpoints(bp_files):
     =====================
 
     The start and end breakpoint positions are inclusive, and 1-based.
-    The start-end intervals should cover all the sequence,
-    therefore start_position_i_1 is always 1 and end_position_i_ni is the length of the sequence i.
     If subtype_i_k is the same ad subtype_i_l then this subtype appears several times in this sequence
     (including intervals k and l).
     If several subtypes are specified for an interval, e.g. subtype_i_k/subtype_i_l,
@@ -93,8 +91,8 @@ def breakpoints2bitmasks(id2subtype2interval, generalise_subtypes=True):
 
     id2st2bitmask = {}
     for name, subtype2intervals in id2subtype2interval.items():
-        subtype2bitmask = defaultdict(lambda: np.zeros(max(max(stop for (start, stop) in intervals)
-                                                           for intervals in subtype2intervals.values()), dtype=bool))
+        n = max(max(stop for (start, stop) in intervals) for intervals in subtype2intervals.values())
+        subtype2bitmask = defaultdict(lambda: np.zeros(n, dtype=bool))
         for subtype, intervals in subtype2intervals.items():
             if generalise_subtypes and len(subtype) == 2 and subtype[1].isdigit() and subtype[0].isalpha():
                 subtype = subtype[0]
@@ -130,16 +128,19 @@ def expand_crfs(id2subtype2bitmask, crf2st2bitmask):
     :return: crf2st2bitmask: dict
     """
     for name, st2bm in id2subtype2bitmask.items():
-        crfs = [_ for _ in st2bm.keys() if _.startswith('CRF')]
+        crfs = [_ for _ in st2bm.keys() if _.startswith('CRF') and _ in crf2st2bitmask]
         while crfs:
             for crf in crfs:
                 bm = st2bm[crf]
                 for st, bitmask in crf2st2bitmask[crf].items():
                     intersection = bitmask & bm
                     if np.any(intersection):
-                        st2bm[st] |= intersection
+                        if st in st2bm:
+                            st2bm[st] |= intersection
+                        else:
+                            st2bm[st] = intersection
                 del st2bm[crf]
-            crfs = [_ for _ in st2bm.keys() if _.startswith('CRF')]
+            crfs = [_ for _ in st2bm.keys() if _.startswith('CRF') and _ in crf2st2bitmask]
 
 
 def get_reference_coordinates(aln_file, reference_id=HXB2_LOS_ALAMOS_ID):
@@ -203,7 +204,7 @@ def parse_aligned_coordinates(jphmm_msas):
     return id2pos
 
 
-def shift_bitmask(id2subtype2bitmask, id2coordinates, n_gappy, gap_fill=1):
+def shift_bitmask(id2subtype2bitmask, id2coordinates, n_gappy):
     """
     Realignes the bitmasks in a mapping according to specified coordinates
     (e.g. adds gaps to the bitmasks filled according to gap_fill parameter, either with 1s or 0s).
@@ -225,8 +226,6 @@ def shift_bitmask(id2subtype2bitmask, id2coordinates, n_gappy, gap_fill=1):
     :type id2coordinates: dict
     :param n_gappy: length of the alignment
     :type n_gappy: int
-    :param gap_fill: what to fill the gaps in the aligned bitmasks with: 0 or 1
-    :type gap_fill: int (0 or 1)
     :return: mapping between sequences ids and insertion lengths
         (specified by the number of coordinates equal to -1 (5'-Insertion) and n_gappy (3'-Insertion)),
         plus modifies the input bitmask mapping
@@ -250,7 +249,7 @@ def shift_bitmask(id2subtype2bitmask, id2coordinates, n_gappy, gap_fill=1):
         id2insertion_length[name] += insertion_end + insertion_start
         shifted_positions = shifted_positions[insertion_start: len(shifted_positions) - insertion_end]
         for st, bitmask in list(subtype2bitmask.items()):
-            gappy_bitmask = np.ones(n_gappy, dtype=bool) if gap_fill else np.zeros(n_gappy, dtype=bool)
+            gappy_bitmask = np.zeros(n_gappy, dtype=bool)
             gappy_bitmask[shifted_positions] = bitmask[insertion_start: len(bitmask) - insertion_end]
             if not np.any(gappy_bitmask):
                 del subtype2bitmask[st]
@@ -259,7 +258,27 @@ def shift_bitmask(id2subtype2bitmask, id2coordinates, n_gappy, gap_fill=1):
     return id2insertion_length
 
 
-def save_bitmask(id2st2bitmask, out_file):
+def get_gap_mask(id2subtype2bitmask):
+    """
+    Calculates a mapping between the sequence ids and the gap positions (1 for non-gap, 0 for gap).
+
+    :param id2subtype2bitmask: mapping between sequences ids and a mapping of subtypes to bitmasks
+        (represented as boolean numpy arrays): {id: {subtype: bitmask, ...}, ..}
+    :type id2subtype2bitmask: dict
+    :return: mapping between sequences ids bitmasks of gap positions
+        (represented as boolean numpy arrays): {id: bitmask, ...}
+    :rtype: dict
+    """
+    id2gap_mask = {}
+    for name, subtype2bitmask in id2subtype2bitmask.items():
+        gap_mask = np.zeros(len(next(iter(subtype2bitmask.values()))), dtype=bool)
+        for bitmask in subtype2bitmask.values():
+            gap_mask |= bitmask
+        id2gap_mask[name] = gap_mask
+    return id2gap_mask
+
+
+def save_bitmask(id2subtype2bitmask, out_file):
     """
     Saves a bitmask mapping to a file, in the following format:
 
@@ -281,9 +300,9 @@ def save_bitmask(id2st2bitmask, out_file):
     :type out_file: str
     """
     with open(out_file, 'w+') as f:
-        for name in sorted(id2st2bitmask.keys()):
+        for name in sorted(id2subtype2bitmask.keys()):
             f.write('>>{}\n'.format(name))
-            subtype2bitmask = id2st2bitmask[name]
+            subtype2bitmask = id2subtype2bitmask[name]
             for st in sorted(subtype2bitmask.keys()):
                 f.write('{}\t{}\n'.format(st, ' '.join(str(int(_)) for _ in subtype2bitmask[st])))
 
