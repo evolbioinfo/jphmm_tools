@@ -51,9 +51,9 @@ def main():
 
     parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=VERSION))
 
-    parser.add_argument('--jphmm_msas', nargs='+', type=str,
+    parser.add_argument('--jphmm_msas', required=True, nargs='+', type=str,
                         help="Path(s) to jpHMM-produced alignment file(s) (such as alignment_to_msa.txt).")
-    parser.add_argument('--in_fas', nargs='+', type=str,
+    parser.add_argument('--in_fas', required=True, nargs='+', type=str,
                         help="Path(s) to fasta file(s) containing sequences to be aligned.")
     parser.add_argument('--out_aln', required=True, type=str,
                         help="Path where to save the output alignment file (in fasta format).")

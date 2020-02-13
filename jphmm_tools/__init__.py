@@ -4,7 +4,7 @@ from Bio import SeqIO
 from Bio.Alphabet import generic_dna
 import numpy as np
 
-VERSION = 0.1
+VERSION = '0.1.1'
 
 HXB2_LOS_ALAMOS_ID = 'B.FR.83.HXB2_LAI_IIIB_BRU.K03455'
 

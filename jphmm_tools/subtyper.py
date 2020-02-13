@@ -187,9 +187,9 @@ def main():
     parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=VERSION))
 
     jphmm_group = parser.add_argument_group('jpHMM-output-file-related arguments')
-    jphmm_group.add_argument('--jphmm_msas', nargs='+', type=str,
+    jphmm_group.add_argument('--jphmm_msas', required=True, nargs='+', type=str,
                              help="Path(s) to jpHMM-produced alignment file(s) (such as alignment_to_msa.txt).")
-    jphmm_group.add_argument('--jphmm_recs', nargs='+', type=str,
+    jphmm_group.add_argument('--jphmm_recs', required=True, nargs='+', type=str,
                              help="Path(s) to jpHMM-produced breakpoint file(s) (such as recombination.txt).")
 
     bp_group = parser.add_argument_group('CRF-breakpoint-related arguments')
@@ -209,7 +209,7 @@ def main():
                                "(HXB2 most probably) in the --aln_file")
 
     tune_group = parser.add_argument_group('Fine-tuning arguments')
-    tune_group.add_argument('--slack', default=0, type=int,
+    tune_group.add_argument('--slack', required=False, default=0, type=int,
                             help="Number of nucleotides for which the wrong subtype can be ignored while matching CRFs.")
     tune_group.add_argument('--generalise_subtypes', action='store_true',
                             help="Replace the more specific subtypes (e.g. A1, A2) by more generic ones (e.g. A).")
