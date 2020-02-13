@@ -1,0 +1,11 @@
+# Breakpoints from Los Alamos HIV sequence database:
+# https://www.hiv.lanl.gov/content/sequence/HIV/CRFs/breakpoints.html
+
+>CRF1 # Breakpoints are approximate, based on http://www.ncbi.nlm.nih.gov/pubmed/8794346 (Gao et al. 1996) Figure 6.
+1	10	A
+11	25	B
+
+>CRF2 # Breakpoints from http://www.ncbi.nlm.nih.gov/pubmed/9683568 (Carr et al. 1998) (exact breakpoints transferred from reference sequence UG037 to HXB2).
+1	5	CRF1
+6	20	C
+21	25	A

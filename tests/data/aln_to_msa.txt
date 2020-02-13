@@ -1,0 +1,22 @@
+# Output of the jpHMM.
+#
+#   chosen parameters:
+#	jump probability: 	1e-09
+#
+#   format:
+#   sequence_name (bw=beam-width)
+#   start_position	 end_position	 predicted_subtype
+#
+# predicted recombination with breakpoints based on raw sequence positions
+# of the following sequence(s):
+
+>CRF1
+1 2 3 4 5 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+>nonCRF
+1 2 3 4 5 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 36 36
+>CRF2
+0 0 0 1 2 3 4 5 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+>HXB2_or_CRF
+21 22 23 24 25 26 27 28 29 30
+>CRF
+12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
