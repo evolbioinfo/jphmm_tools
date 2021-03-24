@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict, Counter, namedtuple
 
 from Bio import SeqIO
@@ -5,6 +6,10 @@ from Bio.Alphabet import generic_dna
 import numpy as np
 
 VERSION = '0.1.2'
+
+DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
+HIV1_BREAKPOINTS = os.path.join(DATA_DIR, 'HIV1.breakpoints')
+HXB2_FA = os.path.join(DATA_DIR, 'HXB2.fasta')
 
 HXB2_LOS_ALAMOS_ID = 'B.FR.83.HXB2_LAI_IIIB_BRU.K03455'
 
@@ -102,6 +107,28 @@ def breakpoints2bitmasks(id2subtype2interval, generalise_subtypes=True):
     return id2st2bitmask
 
 
+def cut_breakpoints(id2subtype2bitmask, cut_ref, full_ref=None):
+    """
+    Cuts breakpoints to contain only the part of the reference sequence, as specified by cut_ref and full_ref.
+
+    :param id2subtype2bitmask: mapping between sequences ids and a mapping of subtypes to bitmasks
+        (represented as boolean numpy arrays):  {id: {subtype: bitmask, ...}, ..},
+        corresponding to the full reference sequence
+    :type id2subtype2bitmask: dict
+    :param cut_ref: part of the reference sequence (e.g. a particular gene)
+    :type cut_ref: str
+    :param full_ref: full reference sequence, corresponding to the breakpoints. By default HXB2 is taken.
+    :type full_ref: str
+    """
+    if not full_ref:
+        full_ref = get_reference_seq(HXB2_FA)
+    start = full_ref.lower().index(cut_ref.lower())
+    stop = start + len(cut_ref)
+    for id, subtype2bitmask in id2subtype2bitmask.items():
+        for subtype, bitmask in subtype2bitmask.items():
+            subtype2bitmask[subtype] = bitmask[start: stop]
+
+
 def expand_crfs(id2subtype2bitmask, crf2st2bitmask):
     """
     Replaces CRFs bitmasks with their corresponding primary subtype bitmasks.
@@ -143,6 +170,37 @@ def expand_crfs(id2subtype2bitmask, crf2st2bitmask):
             crfs = [_ for _ in st2bm.keys() if _.startswith('CRF') and _ in crf2st2bitmask]
 
 
+def get_reference_seq(aln_file, reference_id=HXB2_LOS_ALAMOS_ID):
+    """
+    Finds the reference sequence in the aligned file.
+
+    :param aln_file: path to the alignment file in fasta format.
+    :type aln_file: str
+    :param reference_id: id of the reference sequence in the alignment
+    :type reference_id: str
+    :return: reference sequence
+    :rtype: str
+    """
+    ref = None
+    for rec in SeqIO.parse(aln_file, 'fasta', alphabet=generic_dna):
+        if reference_id == rec.id:
+            ref = rec
+            break
+    return str(ref.seq)
+
+
+def remove_gaps(seq):
+    """
+    Removes gaps from a sequence.
+
+    :param seq: gappy sequence of interest
+    :type seq: str
+    :return: sequence with gaps removed
+    :rtype: str
+    """
+    return seq.replace('-', '')
+
+
 def get_reference_coordinates(aln_file, reference_id=HXB2_LOS_ALAMOS_ID):
     """
     Finds the coordinates (0-based) of reference sequence in the aligned file,
@@ -158,15 +216,10 @@ def get_reference_coordinates(aln_file, reference_id=HXB2_LOS_ALAMOS_ID):
         n containing the reference sequence length (without gaps), and n_gappy containing the alignment length.
     :rtype: collections.namedtuple
     """
-    ref = None
-    for rec in SeqIO.parse(aln_file, 'fasta', alphabet=generic_dna):
-        if reference_id == rec.id:
-            ref = rec
-            break
-
-    gappy_seq = str(ref.seq)
+    gappy_seq = get_reference_seq(aln_file, reference_id)
+    seq = remove_gaps(gappy_seq)
     n_gappy = len(gappy_seq)
-    n = len(gappy_seq.replace('-', ''))
+    n = len(seq)
     position_shift = [i for (i, c) in enumerate(gappy_seq) if c != '-']
     Coordinates = namedtuple('Coordinates', ['coordinates', 'n', 'n_gappy'])
     return Coordinates(coordinates=position_shift, n=n, n_gappy=n_gappy)

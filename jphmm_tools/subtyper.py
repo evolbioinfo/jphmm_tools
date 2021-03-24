@@ -6,10 +6,7 @@ import pandas as pd
 
 from jphmm_tools import parse_breakpoints, breakpoints2bitmasks, shift_bitmask, expand_crfs, \
     parse_aligned_coordinates, \
-    parse_bitmask, get_reference_coordinates, HXB2_LOS_ALAMOS_ID, VERSION, get_gap_mask
-
-DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
-HIV1_BREAKPOINTS = os.path.join(DATA_DIR, 'HIV1.breakpoints')
+    parse_bitmask, get_reference_coordinates, HXB2_LOS_ALAMOS_ID, VERSION, get_gap_mask, HIV1_BREAKPOINTS
 
 COMPATIBLE_SUBTYPE_COL = 'compatible_subtypes'
 SUBTYPE_JPHMM_COL = 'subtype_jpHMM'
@@ -17,6 +14,7 @@ SUBTYPE_JPHMM_COL = 'subtype_jpHMM'
 
 def get_subtypes(jphmm_msas, jphmm_recs, gappy_breakpoint_bitmask_file=None,
                  breakpoint_file=HIV1_BREAKPOINTS, aln_file=None,
+                 crf2st2bitmask = None,
                  reference_id=HXB2_LOS_ALAMOS_ID, slack=0, generalise_subtypes=True):
     """
     Converts the jpHMM output files to a dataframe containing two columns: one with the subtypes detected by jpHMM,
@@ -31,12 +29,15 @@ def get_subtypes(jphmm_msas, jphmm_recs, gappy_breakpoint_bitmask_file=None,
     :type gappy_breakpoint_bitmask_file: str
     :param breakpoint_file: (optional) path to the file CRF breakpoint interval file.
         Must be specified together with the alignment file used by jpHMM.
-        Otherwise, gappy_breakpoint_bitmask_file must be specified.
+        Otherwise, gappy_breakpoint_bitmask_file or crf2st2bitmask must be specified.
     :type breakpoint_file: str
     :param aln_file: (optional) path to the alignment file used by jpHMM.
-        Must be specified together if breakpoint_file is used to specify CRF breakpoints.
+        Must be specified together with the reference_id if breakpoint_file is used to specify CRF breakpoints.
     :param reference_id: (optional) need to be specified if aln_file+breakpoint_file are used to specify CRF breakpoints.
         The id of the sequences used as the reference for the breakpoint coordinates (HXB2 most probably) in the aln_file.
+    :param crf2st2bitmask: mapping between CRF ids and a mapping of subtypes to bitmasks
+        (represented as boolean numpy arrays): {id: {subtype: bitmask, ...}, ..}
+    :return: crf2st2bitmask: dict
     :type reference_id: str
     :param slack: (optional, default is 0) number of nucleotides for which the wrong subtype
         can be ignored while matching CRFs.
@@ -49,14 +50,17 @@ def get_subtypes(jphmm_msas, jphmm_recs, gappy_breakpoint_bitmask_file=None,
     :rtype: pandas.DataFrame
     """
 
-    if gappy_breakpoint_bitmask_file is None:
-        if breakpoint_file is None or aln_file is None:
-            raise ValueError('Either the gappy breakpoint bitmask file '
-                             'or the breakpoint file + the alignment file (used for jpHMM subtyping) must be specified')
-        crf2st2bitmask, n_gappy = get_gappy_breakpoints(breakpoint_file, aln_file, reference_id,
-                                                        generalise_subtypes=generalise_subtypes)
+    if crf2st2bitmask is None:
+        if gappy_breakpoint_bitmask_file is None:
+            if breakpoint_file is None or aln_file is None:
+                raise ValueError('Either the gappy breakpoint bitmask file '
+                                 'or the breakpoint file + the alignment file (used for jpHMM subtyping) must be specified')
+            crf2st2bitmask, n_gappy = get_gappy_breakpoints(breakpoint_file, aln_file, reference_id,
+                                                            generalise_subtypes=generalise_subtypes)
+        else:
+            crf2st2bitmask = parse_bitmask(gappy_breakpoint_bitmask_file)
+            n_gappy = get_length(crf2st2bitmask)
     else:
-        crf2st2bitmask = parse_bitmask(gappy_breakpoint_bitmask_file)
         n_gappy = get_length(crf2st2bitmask)
 
     crf2gapmask = get_gap_mask(crf2st2bitmask)

@@ -16,7 +16,7 @@ setup(
         'Topic :: Software Development',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    version='0.1.2',
+    version='0.1.3',
     description='Tools for extracting information from jpHMM (http://jphmm.gobics.de) output.',
     author='Anna Zhukova',
     author_email='anna.zhukova@pasteur.fr',
@@ -27,7 +27,8 @@ setup(
             'console_scripts': [
                 'jphmm_align = jphmm_tools.aligner:main',
                 'jphmm_subtype = jphmm_tools.subtyper:main',
-                'jphmm_ref = jphmm_tools.la_referencer:main'
+                'jphmm_ref = jphmm_tools.la_referencer:main',
+                'jphmm_split = jphmm_tools.splitter:main'
             ]
     },
 )
