@@ -1,6 +1,5 @@
 import numpy as np
 from Bio import SeqIO
-from Bio.Alphabet import generic_dna
 
 from jphmm_tools.__init__ import parse_aligned_coordinates, VERSION
 
@@ -25,7 +24,7 @@ def align(jphmm_msas, in_fas, out_aln, aln_len):
         if isinstance(in_fas, str):
             in_fas = [in_fas]
         for in_fa in in_fas:
-            for rec in SeqIO.parse(in_fa, 'fasta', alphabet=generic_dna):
+            for rec in SeqIO.parse(in_fa, 'fasta'):
                 positions = id2pos[rec.id]
                 if positions:
                     aligned_seq = np.array(['-'] * aln_len)

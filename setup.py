@@ -16,7 +16,7 @@ setup(
         'Topic :: Software Development',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    version='0.1.3',
+    version='0.1.4',
     description='Tools for extracting information from jpHMM (http://jphmm.gobics.de) output.',
     author='Anna Zhukova',
     author_email='anna.zhukova@pasteur.fr',

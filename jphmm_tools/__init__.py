@@ -1,11 +1,10 @@
 import os
 from collections import defaultdict, Counter, namedtuple
 
-from Bio import SeqIO
-from Bio.Alphabet import generic_dna
 import numpy as np
+from Bio import SeqIO
 
-VERSION = '0.1.2'
+VERSION = '0.1.4'
 
 DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 HIV1_BREAKPOINTS = os.path.join(DATA_DIR, 'HIV1.breakpoints')
@@ -182,7 +181,7 @@ def get_reference_seq(aln_file, reference_id=HXB2_LOS_ALAMOS_ID):
     :rtype: str
     """
     ref = None
-    for rec in SeqIO.parse(aln_file, 'fasta', alphabet=generic_dna):
+    for rec in SeqIO.parse(aln_file, 'fasta'):
         if reference_id == rec.id:
             ref = rec
             break

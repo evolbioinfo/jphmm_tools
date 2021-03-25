@@ -1,7 +1,6 @@
 import logging
 
 from Bio import SeqIO
-from Bio.Alphabet import generic_dna
 
 from jphmm_tools import VERSION
 
@@ -31,7 +30,7 @@ def split(in_fa, out_fa_pattern=None, chunk_size=1, n=0, exclude_ids=None):
     if exclude_ids:
         logging.info('Excluding the sequences {} from the split files...'.format(exclude_ids))
 
-    sequences = [rec for rec in SeqIO.parse(in_fa, 'fasta', alphabet=generic_dna) if rec.id not in exclude_ids]
+    sequences = [rec for rec in SeqIO.parse(in_fa, 'fasta') if rec.id not in exclude_ids]
     if n:
         chunk_size = len(sequences) // n
     elif chunk_size:

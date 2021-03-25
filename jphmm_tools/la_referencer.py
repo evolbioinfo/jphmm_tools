@@ -2,7 +2,6 @@ import re
 from collections import defaultdict
 
 from Bio import SeqIO
-from Bio.Alphabet import generic_dna
 
 from jphmm_tools import VERSION
 
@@ -17,7 +16,7 @@ def get_subtype(name):
     :return: list of subtypes
     :rtype: list(str)
     """
-    st = re.findall(r'^[^.]+[\._]', name)[0]
+    st = re.findall(r'^[^.]+[._]', name)[0]
     st = st[:-1]
     if st == 'x':
         return []
@@ -36,7 +35,7 @@ def reformat_reference(la_alignment, jphmm_ref_alignment):
     :type jphmm_ref_alignment: str
     """
     subtype2rec = defaultdict(list)
-    for rec in SeqIO.parse(la_alignment, 'fasta', alphabet=generic_dna):
+    for rec in SeqIO.parse(la_alignment, 'fasta'):
         sts = get_subtype(rec.id)
         if len(sts) == 1:
             print(sts)
